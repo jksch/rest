@@ -1,4 +1,6 @@
 # Rest
+[![Build Status](https://travis-ci.org/jksch/revolver.svg?branch=master)](https://travis-ci.org/jksch/revolver)
+
 Is a collection of convenience functions for the http.ServeMux.
 
 ### Introduction
