@@ -1,5 +1,7 @@
 # Rest
 [![Build Status](https://travis-ci.org/jksch/revolver.svg?branch=master)](https://travis-ci.org/jksch/revolver)
+[![Coverage Status](https://coveralls.io/repos/github/jksch/rest/badge.svg?branch=master)](https://coveralls.io/github/jksch/rest?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jksch/rest)](https://goreportcard.com/report/github.com/jksch/rest)
 
 Is a collection of convenience functions for the http.ServeMux.
 
