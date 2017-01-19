@@ -2,6 +2,8 @@
 [![Build Status](https://travis-ci.org/jksch/revolver.svg?branch=master)](https://travis-ci.org/jksch/revolver)
 [![Coverage Status](https://coveralls.io/repos/github/jksch/rest/badge.svg?branch=master)](https://coveralls.io/github/jksch/rest?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jksch/rest)](https://goreportcard.com/report/github.com/jksch/rest)
+[![GoDoc](https://godoc.org/github.com/jksch/rest?status.svg)](https://godoc.org/github.com/jksch/rest)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/jksch/rest/blob/master/LICENSE)
 
 Is a collection of convenience functions for the http.ServeMux.
 
