@@ -82,3 +82,37 @@ mux := http.NewServeMux()
 loggingMux := rest.RequestLogger(mux, logger, errLog)
 log.Println(http.ListenAndServe(":2121", loggingMux))
 ```
+
+### Self signed certificate creation
+Caution: Before using this consider using a secure certificate from https://letsencrypt.org/.
+Since a self signed certificate is less secure than a proper one. Mainly because the identity of the server using this self signed certificate cannot be confirmed. Which makes it especially vulnerable for man in the middle attacks. Do not use this with public servers!
+
+For more information see:
+https://en.wikipedia.org/wiki/Self-signed_certificate#Security_issues.
+https://en.wikipedia.org/wiki/Man-in-the-middle_attack
+
+For letsencrypt in go you can use:
+https://github.com/ericchiang/letsencrypt to get the cert.
+
+A self signed certificate can be created as follows:
+```go
+func main() {
+	subject := pkix.Name{
+		Country:            []string{"Your country"},
+		Organization:       []string{"Your organization"},
+		OrganizationalUnit: []string{"Your unit"},
+		Locality:           []string{"Your locality"},
+		Province:           []string{"Your province"},
+		StreetAddress:      []string{"Your street address"},
+		PostalCode:         []string{"Your postal code"},
+		CommonName:         "Your common name",
+	}
+	addrs := []string{"127.0.0.1", "192.168.0.100"}
+
+	conf := rest.NewCertConf(subject, addrs)
+	if err := rest.GenerateTLSCertificate(conf); err != nil {
+		fmt.Printf("error while creating TLS cert, %v", err)
+	}
+}
+```
+When using the default CertConf the created certificate can be found in the current directory (./).
