@@ -20,81 +20,63 @@ const (
 	ContentTypeJSON      = "application/json"
 )
 
+// Middleware defines the http.HandlerFunc as middleware.
+type Middleware func(http.HandlerFunc) http.HandlerFunc
+
+// Method returns a middleware that restricts the allowed http method to the given string.
+func Method(method string) Middleware {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != method {
+				http.Error(w, fmt.Sprintf("only %s allowed", method), http.StatusMethodNotAllowed)
+				return
+			}
+			f(w, r)
+		}
+	}
+}
+
+// Chain executes all given middleware functions for a given http.HandlerFunc.
+func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
+	for _, m := range middlewares {
+		f = m(f)
+	}
+	return f
+}
+
 // GET restricts the given handler func to the GET method for the given path.
 func GET(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only GET allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodGet)))
 }
 
 // POST restricts the given handler func to the POST method for the given path.
 func POST(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only POST allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodPost)))
 }
 
 // PUT restricts the given handler func to the PUT method for the given path.
 func PUT(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only PUT allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodPut)))
 }
 
 // DELETE restricts the given handler func to the DELETE method for the given path.
 func DELETE(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only PUT allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodDelete)))
 }
 
 // PATCH restricts the given handler func to the PATCH method for the given path.
 func PATCH(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPatch {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only PATH allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodPatch)))
 }
 
 // OPTIONS restricts the given handler func to the OPTIONS method for the given path.
 func OPTIONS(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only OPTIONS allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodOptions)))
 }
 
 // TRACE restricts the given handler func to the TRACE method for the given path.
 func TRACE(mux *http.ServeMux, path string, f func(w http.ResponseWriter, r *http.Request)) {
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodTrace {
-			f(w, r)
-			return
-		}
-		http.Error(w, "only TRACE allowed", http.StatusMethodNotAllowed)
-	})
+	mux.HandleFunc(path, Chain(f, Method(http.MethodTrace)))
 }
 
 // IntFromURL extracts the int value on the given position counted backwards beginning by 0.
@@ -142,43 +124,57 @@ func String(w http.ResponseWriter, res string, code int) {
 	fmt.Fprintln(w, res)
 }
 
-// BasicAuthent is a basic authentication middleware
+// BasicAuthentMiddleware is a basic authentication middleware
 // that checks authentication against the given authorized function.
-func BasicAuthent(handler http.Handler, realm string, authorized func(user, password string) bool) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user, password, ok := r.BasicAuth()
-		if !ok {
-			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, realm))
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		if !authorized(user, password) {
-			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, realm))
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		handler.ServeHTTP(w, r)
-	})
+func BasicAuthentMiddleware(realm string, authorized func(user, password string) bool) Middleware {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, password, ok := r.BasicAuth()
+			if !ok {
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, realm))
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			if !authorized(user, password) {
+				w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, realm))
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			f(w, r)
+		})
+	}
 }
 
-// RequestLogger is a middleware that logs incoming request to the provided loggers.
+// RequestLoggerMiddleware is a middleware that logs incoming request to the provided loggers.
+func RequestLoggerMiddleware(logger, errlog *log.Logger) Middleware {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			method := r.Method
+			url := r.URL
+			host := r.Host
+			proto := r.Proto
+			res := NewResponse(w)
+
+			f.ServeHTTP(res, r)
+
+			switch {
+			case res.Status >= 400:
+				errlog.Printf("<-- %s %s %s %d %s %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto, errorString(res))
+			default:
+				logger.Printf("<-- %s %s %s %d %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto)
+			}
+		})
+	}
+}
+
+// BasicAuthent adds the BasicAuthentMiddleware to the given handler.
+func BasicAuthent(handler http.Handler, realm string, authorized func(user, password string) bool) http.Handler {
+	return BasicAuthentMiddleware(realm, authorized)(handler.ServeHTTP)
+}
+
+// RequestLogger adds the RequestLoggerMiddleware to the given handler.
 func RequestLogger(handler http.Handler, logger, errlog *log.Logger) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		method := r.Method
-		url := r.URL
-		host := r.Host
-		proto := r.Proto
-		res := NewResponse(w)
-
-		handler.ServeHTTP(res, r)
-
-		switch {
-		case res.Status >= 400:
-			errlog.Printf("<-- %s %s %s %d %s %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto, errorString(res))
-		default:
-			logger.Printf("<-- %s %s %s %d %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto)
-		}
-	})
+	return RequestLoggerMiddleware(logger, errlog)(handler.ServeHTTP)
 }
 
 func errorString(res *Response) string {
