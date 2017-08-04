@@ -145,38 +145,6 @@ func TestGetFunction(t *testing.T) {
 	}
 }
 
-func BenchmarkGet_withGET(b *testing.B) {
-	mux := http.NewServeMux()
-	GET(mux, path, testFunc)
-
-	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8080/foo", nil)
-	w := httptest.NewRecorder()
-
-	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, req)
-	}
-}
-
-func BenchmarkGet_withSwitch(b *testing.B) {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			w.Write([]byte("bar"))
-		default:
-			w.WriteHeader(http.StatusBadRequest)
-		}
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8080/foo", nil)
-	w := httptest.NewRecorder()
-
-	for i := 0; i < b.N; i++ {
-		mux.ServeHTTP(w, req)
-	}
-}
-
 func TestRest_IntFromUrl(t *testing.T) {
 	var tests = []struct {
 		path     *url.URL
@@ -485,4 +453,91 @@ func TestRequestLogger(t *testing.T) {
 		})
 	}
 
+}
+
+func testMiddleware(append string) Middleware {
+	return func(f http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(append))
+			f(w, r)
+		}
+	}
+}
+func TestChainMiddleware(t *testing.T) {
+	var tests = []struct {
+		middleware []Middleware
+		exp        string
+	}{
+		{
+			middleware: []Middleware{},
+			exp:        "core",
+		},
+		{
+			middleware: []Middleware{
+				testMiddleware("1 "),
+				testMiddleware("2 "),
+				testMiddleware("3 "),
+			},
+			exp: "3 2 1 core",
+		},
+	}
+	for index, test := range tests {
+		index, test := index, test
+		t.Run(fmt.Sprintf("%d. test chain middleware", index), func(t *testing.T) {
+			t.Parallel()
+			h := &wrapper{
+				wraped: func(w http.ResponseWriter, r *http.Request) {
+					w.Write([]byte("core"))
+				},
+			}
+			rec := httptest.NewRecorder()
+			req, err := http.NewRequest(http.MethodGet, "/", nil)
+			testErr(t, err)
+			mux := http.NewServeMux()
+			mux.Handle("/", ChainHandler(h, test.middleware...))
+			mux.ServeHTTP(rec, req)
+			got := rec.Body.String()
+			if test.exp != got {
+				t.Errorf("%d. exp body: '%s' got:'%s'", index, test.exp, got)
+			}
+		})
+	}
+}
+
+func BenchmarkGet_withGET(b *testing.B) {
+	mux := http.NewServeMux()
+	GET(mux, path, testFunc)
+
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8080/foo", nil)
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		mux.ServeHTTP(w, req)
+	}
+}
+
+func BenchmarkGet_withSwitch(b *testing.B) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			w.Write([]byte("bar"))
+		default:
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:8080/foo", nil)
+	w := httptest.NewRecorder()
+
+	for i := 0; i < b.N; i++ {
+		mux.ServeHTTP(w, req)
+	}
+}
+
+func testErr(t *testing.T, err error) {
+	if err != nil {
+		t.Fatalf("unexpected error, %v", err)
+	}
 }

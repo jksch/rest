@@ -23,6 +23,14 @@ const (
 // Middleware defines the http.HandlerFunc as middleware.
 type Middleware func(http.HandlerFunc) http.HandlerFunc
 
+type wrapper struct {
+	wraped func(http.ResponseWriter, *http.Request)
+}
+
+func (h *wrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.wraped(w, r)
+}
+
 // Method returns a middleware that restricts the allowed http method to the given string.
 func Method(method string) Middleware {
 	return func(f http.HandlerFunc) http.HandlerFunc {
@@ -42,6 +50,15 @@ func Chain(f http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
 		f = m(f)
 	}
 	return f
+}
+
+// ChainHandler like Chain for http.Handlers, it executes all middleware on the given http.Handler
+func ChainHandler(f http.Handler, middlewares ...Middleware) http.Handler {
+	wrap := &wrapper{wraped: f.ServeHTTP}
+	for _, mid := range middlewares {
+		wrap.wraped = mid(wrap.wraped)
+	}
+	return wrap
 }
 
 // GET restricts the given handler func to the GET method for the given path.
@@ -159,9 +176,9 @@ func RequestLoggerMiddleware(logger, errlog *log.Logger) Middleware {
 
 			switch {
 			case res.Status >= 400:
-				errlog.Printf("<-- %s %s %s %d %s %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto, errorString(res))
+				errlog.Printf("<-- %s %s %s %d %s %s %s", method, url, host, res.Status, time.Since(res.StartTime), proto, errorString(res))
 			default:
-				logger.Printf("<-- %s %s %s %d %s %s", method, url, host, res.Status, time.Now().Sub(res.StartTime), proto)
+				logger.Printf("<-- %s %s %s %d %s %s", method, url, host, res.Status, time.Since(res.StartTime), proto)
 			}
 		})
 	}
