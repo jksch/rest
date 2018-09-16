@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net"
 	"net/mail"
+	"net/url"
 	"os"
 	"time"
 )
@@ -42,13 +43,22 @@ type (
 
 // CertConf holds the TLS certificate configuration.
 type CertConf struct {
-	ValidFor  time.Duration
-	RASBits   int
-	Subject   pkix.Name
-	CertOut   func() (io.WriteCloser, error) // Will write to the writer and then close.
-	KeyOut    func() (io.WriteCloser, error) // Will write to the writer and then close.
-	Random    io.Reader
-	HostAddrs []string
+	ValidFor       time.Duration
+	RASBits        int
+	Subject        pkix.Name
+	CertOut        func() (io.WriteCloser, error) // Will write to the writer and then close.
+	KeyOut         func() (io.WriteCloser, error) // Will write to the writer and then close.
+	Random         io.Reader
+	HostAddrs      []string
+	SubjectAltName SubjectAltName
+}
+
+// SubjectAltName holds the relevant values to define the subject alternative name.
+type SubjectAltName struct {
+	DNSNames       []string
+	EmailAddresses []string
+	IPAddresses    []net.IP
+	URIs           []*url.URL
 }
 
 // NewCertConf returns a default certificate configuration for the given subject and hostAddrs.
@@ -145,6 +155,12 @@ func generateCert(conf CertConf, key *rsa.PrivateKey, serial <-chan serialRes) <
 				x509.ExtKeyUsageServerAuth,
 			},
 			BasicConstraintsValid: true,
+
+			// Subject Alternate Name values.
+			DNSNames:       conf.SubjectAltName.DNSNames,
+			EmailAddresses: conf.SubjectAltName.EmailAddresses,
+			IPAddresses:    conf.SubjectAltName.IPAddresses,
+			URIs:           conf.SubjectAltName.URIs,
 		}
 
 		for _, addr := range conf.HostAddrs {
