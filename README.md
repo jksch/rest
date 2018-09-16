@@ -1,5 +1,5 @@
 # Rest
-[![Build Status](https://travis-ci.org/jksch/revolver.svg?branch=master)](https://travis-ci.org/jksch/revolver)
+[![Build Status](https://travis-ci.org/jksch/rest.svg?branch=master)](https://travis-ci.org/jksch/rest)
 [![Coverage Status](https://coveralls.io/repos/github/jksch/rest/badge.svg?branch=master)](https://coveralls.io/github/jksch/rest?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jksch/rest)](https://goreportcard.com/report/github.com/jksch/rest)
 [![GoDoc](https://godoc.org/github.com/jksch/rest?status.svg)](https://godoc.org/github.com/jksch/rest)
