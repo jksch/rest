@@ -157,9 +157,6 @@ func generateCert(conf CertConf, key *rsa.PrivateKey, serial <-chan serialRes) <
 			}
 		}
 
-		template.IsCA = true
-		template.KeyUsage |= x509.KeyUsageCertSign
-
 		res.cert, res.err = x509.CreateCertificate(
 			conf.Random,
 			&template,
