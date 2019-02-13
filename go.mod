@@ -1,1 +1,1 @@
-module github.com/jksch/rest
+module github.com/jksch/rest/v2
