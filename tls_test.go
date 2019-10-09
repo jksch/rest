@@ -61,14 +61,6 @@ var (
 	}
 )
 
-type fakeRand struct {
-	err error
-}
-
-func (f *fakeRand) Read(p []byte) (n int, err error) {
-	return 0, errTest
-}
-
 type testWriter struct {
 	buf   bytes.Buffer
 	write func(p []byte) (n int, err error)
@@ -549,7 +541,7 @@ func TestPinCert(t *testing.T) {
 	// start test server
 	go func() {
 		http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("pong"))
+			_, _ = w.Write([]byte("pong"))
 		})
 		logErr(http.ListenAndServeTLS("127.0.0.1:60601", "test/cert.pem", "test/key.pem", nil), t)
 	}()
@@ -564,7 +556,7 @@ func TestPinCert(t *testing.T) {
 	}
 
 	// fail handshake
-	res, err := http.Get("https://127.0.0.1:60601/ping")
+	_, err = http.Get("https://127.0.0.1:60601/ping")
 	if errStr(err) != "Get https://127.0.0.1:60601/ping: x509: certificate signed by unknown authority" {
 		t.Errorf("exp handshake error")
 	}
@@ -591,10 +583,8 @@ func TestPinCert(t *testing.T) {
 		},
 	}}
 
-	res, err = client.Get("https://127.0.0.1:60601/ping")
-	if err != nil {
-		t.Errorf("%v", err)
-	}
+	res, err := client.Get("https://127.0.0.1:60601/ping")
+	logErr(err, t)
 	res.Body.Close()
 }
 

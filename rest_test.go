@@ -11,12 +11,10 @@ import (
 	"testing"
 )
 
-const existsJSON = "exists.json"
-
 var (
 	path     = "/foo"
 	testFunc = func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("bar"))
+		_, _ = w.Write([]byte("bar"))
 	}
 )
 
@@ -347,7 +345,7 @@ func TestBasicAuthent(t *testing.T) {
 			t.Parallel()
 			mux := http.NewServeMux()
 			mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("pong"))
+				_, _ = w.Write([]byte("pong"))
 			})
 			router := BasicAuthent(mux, test.realm, func(user, password string) bool {
 				if user == "admin" && password == "ninja" {
@@ -410,7 +408,7 @@ func TestRequestLogger(t *testing.T) {
 			t.Parallel()
 			mux := http.NewServeMux()
 			mux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte("pong"))
+				_, _ = w.Write([]byte("pong"))
 			})
 			mux.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusAccepted)
@@ -458,7 +456,7 @@ func TestRequestLogger(t *testing.T) {
 func testMiddleware(append string) Middleware {
 	return func(f http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte(append))
+			_, _ = w.Write([]byte(append))
 			f(w, r)
 		}
 	}
@@ -487,7 +485,7 @@ func TestChainMiddleware(t *testing.T) {
 			t.Parallel()
 			h := &wrapper{
 				wraped: func(w http.ResponseWriter, r *http.Request) {
-					w.Write([]byte("core"))
+					_, _ = w.Write([]byte("core"))
 				},
 			}
 			rec := httptest.NewRecorder()
@@ -522,7 +520,7 @@ func BenchmarkGet_withSwitch(b *testing.B) {
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte("bar"))
+			_, _ = w.Write([]byte("bar"))
 		default:
 			w.WriteHeader(http.StatusBadRequest)
 		}

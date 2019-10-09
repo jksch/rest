@@ -131,7 +131,7 @@ func JSON(w http.ResponseWriter, res interface{}, code int) {
 	}
 	w.Header().Set(ContentType, ContentTypeJSON)
 	w.WriteHeader(code)
-	w.Write(JSON)
+	_, _ = w.Write(JSON)
 }
 
 // String writes the given string to the client as content type plain/text UTF-8.
